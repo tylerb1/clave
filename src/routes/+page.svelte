@@ -6,16 +6,10 @@
   import { 
     storePopup,
     getModalStore,
-    AppBar, 
-    AppShell, 
-    Toast,
     getToastStore, 
     type ToastSettings, 
     initializeStores,
-	Modal,
 	type ModalSettings,
-	ProgressRadial,
-	type ModalComponent,
   } from '@skeletonlabs/skeleton';
   import { computePosition, autoUpdate, offset, shift, flip, arrow } from '@floating-ui/dom';
 
@@ -24,23 +18,23 @@
   const modalStore = getModalStore();
   const toastStore = getToastStore();
 
-  let isGeneratingAnswer = false
   let isAdmin = false
   let potentialRoomName = ""
-  let room = ""
-  let question = ""
+  let potentialQuestion = ""
+  let potentialAnswer = ""
+  let roomId = ""
+  let roomName = ""
+  let currentQuestion: any = null
   let questions: any[] = []
   let joinedAnswers = ""
   let loading = false
   let email = ""
   let userId = ""
-  let questionId = ""
   let session: AuthSession | null = null
 
   const showToast = (message: string) => {
     const t: ToastSettings = {
-      message,
-      classes: 'alef' 
+      message
     };
     toastStore.trigger(t);
   }
@@ -83,48 +77,66 @@
     modalStore.trigger(modal);
   }
 
-  const getProfile = async (id: string) => {
-    const { data, error, status } = await sb
+  const createNewRoom = async () => {
+    roomName = randomstring.generate()
+    const { data, error } = await sb
+      .from('rooms')
+      .insert([{ name: roomName }])
+    potentialRoomName = ""
+    roomId = (data?.[0] as any).id
+    isAdmin = true
+    await listenToAnswers(roomId)
+  }
+
+  const joinRoom = async (room: string) => {
+    const { data, error } = await sb
       .from('rooms')
       .select(`
-        id
+        id,
+        name,
+        questions (
+          id,
+          question_text,
+          generated_answer,
+          answers (
+            id,
+            answer_text
+          )
+        )
       `)
-      .eq('id', id)
-    if (error && status !== 406) {
-      showToast('Couldn\'t get user profile. Please refresh the page, and if the problem persists, email talkkshopp@protonmail.com.')
-      return undefined
-    } else if (data?.length === 0) {
-      showToast('User profile not found. Please refresh the page, and if the problem persists, email talkkshopp@protonmail.com.')
-      return undefined
-    } else {
-      return data
-    }
-  }
-
-  const createNewRoom = async () => {
-    room = randomstring.generate()
-    const { data, error } = await sb.rpc('create_room', { name: room })
-    potentialRoomName = ""
-    isAdmin = true
-  }
-
-  const joinRoom = async (roomName: string) => {
-    room = roomName
-    const { data, error } = await sb.rpc('join_room', { room })
+      .eq('name', room )
     if (data) {
-      // do stuff
+      console.log(data)
+      roomId = data[0].id
+      questions = data[0].questions
+      currentQuestion = questions?.[0] || null
+      await listenToAnswers(roomId)
     }
   }
 
-  const submitQuestion = () => {
-    questions.push(question)
-    sb
+  const submitQuestion = async () => {
+    const { data, error } = await sb
       .from('questions')
-      .insert([{ question_text: question }])
-      .eq('room', room)
+      .insert([{ 
+        question_text: potentialQuestion,
+        room_id: roomId,
+      }])
+      .select()
+    questions.push(data?.[0])
+    currentQuestion = questions[questions.length - 1]
   }
 
-  const updateSubscription = async () => {
+  const submitAnswer = async () => {
+    await sb
+      .from('answers')
+      .insert([{ 
+        answer_text: potentialAnswer,
+        question_id: currentQuestion.id,
+        room_id: roomId,
+      }])
+  }
+
+  const summarizeAnswers = async () => {
     try {
       const resp = await fetch(
         `${import.meta.env.VITE_EMAIL_REDIRECT_URL}/.netlify/functions/summarize`, 
@@ -134,7 +146,10 @@
             'Content-Type': 'application/json',
             Authorization: `Bearer ${session?.access_token}`,
           },
-          body: JSON.stringify({ question, answers: joinedAnswers}),
+          body: JSON.stringify({ 
+            question: currentQuestion.question_text, 
+            answers: joinedAnswers
+          }),
         }
       )
       const response = await resp.json();
@@ -142,10 +157,10 @@
       await sb
         .from('questions')
         .update({ generated_answer: rawText })
-        .eq('question_id', questionId);
+        .eq('question_id', currentQuestion.id);
       showToast("Answers summarized.")
     } catch (error) {
-      showToast('Error updating subscription. Please try again, and if the problem persists, email talkkshopp@protonmail.com.')
+      showToast('Error summarizing answers.')
     }
   }
 
@@ -155,6 +170,24 @@
       email = data.session?.user?.email || ""
     })
   })
+
+  const listenToAnswers = async (roomId: string) => {
+    await sb
+      .channel(`answer-changes`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: `answers' : ''}`,
+          filter: `room_id=eq.${roomId}`,
+        },
+        (msg) => {
+          console.log(msg)
+        }
+      )
+      .subscribe()
+  }
 </script>
 
 <form on:submit|preventDefault={handleLogin} class="flex flex-col gap-3">
@@ -164,13 +197,13 @@
       class="input text-sm"
       type="email"
       placeholder="Email"
-      bind:value="{email}"
+      bind:value={email}
     />
     <button 
       type="submit" 
       class="btn btn-md rounded-none variant-filled-surface text-xs" 
       aria-live="polite" 
-      disabled="{loading}"
+      disabled={loading}
     >
       <span>Send login link</span>
     </button>
@@ -186,22 +219,28 @@
   >Sign Out</button>
 </div>
 
-{#if room}
-  <p>Room: {room}</p>
+{#if roomId}
+  <p>Room: {roomId}</p>
+  <p>{currentQuestion}</p>
 {:else}
   <button on:click={async () => await createNewRoom()}>Create Room</button>
   <input type="text" bind:value={potentialRoomName} placeholder="Join an existing room..."/>
   <button on:click={async () => await joinRoom(potentialRoomName)}>Join</button> 
 {/if}
 
-{#if room && isAdmin}
-  <input type="text" bind:value={question} placeholder="Question" />
+{#if roomId && isAdmin}
+  {#if currentQuestion}
+    <p>{currentQuestion.answers.length} answers collected</p>
+    <button on:click={summarizeAnswers}>Summarize answers</button>
+  {/if}
+  <input type="text" bind:value={potentialQuestion} placeholder="New question" />
   <button on:click={submitQuestion}>Submit</button>
-{:else if room}
+{:else if roomId}
+  <input type="text" bind:value={potentialAnswer} placeholder="Answer" />
+  <button on:click={submitAnswer}>Submit</button>
   {#each questions as q}
-    <p>{q}</p>
-    <input type="text" bind:value={question} placeholder="Answer" />
-    <button on:click={submitQuestion}>Submit</button>
+    <p>{q.question_text}</p>
+    <button on:click={() => currentQuestion = q}>View question</button>
   {/each}
 {/if}
 
