@@ -169,6 +169,8 @@
           }),
         }
       )
+      console.log("openai response")
+      console.log(resp)
       const response = await resp.json();
       console.log("openai response")
       console.log(response)
