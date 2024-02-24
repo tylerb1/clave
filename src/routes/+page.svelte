@@ -227,7 +227,7 @@
 </script>
 
 {#if userId}
-  <div class="flex flex-col gap-2 max-w-32">
+  <div class="flex flex-col gap-2 max-w-48">
     <p class="text-xs">Logged in as: {email}</p>
     <button 
       type="button" 
@@ -236,7 +236,7 @@
     >Sign Out</button>
   </div>
 
-  <div class="flex flex-col gap-2 max-w-48">
+  <div class="flex flex-col gap-2 max-w-72">
     {#if roomId}
       <p>Room: {roomName}</p>
       {#if currentQuestion}
@@ -300,20 +300,20 @@
             on:click={submitAnswer}
           >Submit</button>
         </div>
-        {#each questions as q}
-          <div class="flex flex-row gap-2">
-            <p>{q.question_text}</p>
-            <button 
-              class="btn btn-sm variant-filled-surface" 
-              on:click={() => {
-                currentQuestion = q
-                currentQuestionAnswer = q.generated_answer || ""
-              }}
-            >View question</button>
-          </div>
-        {/each}
       </div>
     {/if}
+    {#each questions as q}
+      <div class="flex flex-row gap-2">
+        <p>{q.question_text}</p>
+        <button 
+          class="btn btn-sm variant-filled-surface" 
+          on:click={() => {
+            currentQuestion = q
+            currentQuestionAnswer = q.generated_answer || ""
+          }}
+        >View question</button>
+      </div>
+    {/each}
   </div>
 {:else}
   <form on:submit|preventDefault={handleLogin}>
