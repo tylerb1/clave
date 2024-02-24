@@ -39,9 +39,11 @@ export async function handler(event) {
       openAiConfig,
     );
     const data = await response.json();
+    console.log("data:")
+    console.log(data)
     return {
       statusCode: 200,
-      body: data.choices[0].text,
+      body: data,
     };
   } catch (error) {
     console.error('Error:', error);
