@@ -146,6 +146,7 @@
         answer_text: potentialAnswer,
         question_id: currentQuestion.id,
         room_id: roomId,
+        user_id: userId,
       }])
     showToast("Answer submitted.")
   }
@@ -239,61 +240,73 @@
       <p>Current question: {currentQuestion.question_text}</p>
     {/if}
   {:else}
-    <button 
-      class="btn btn-sm variant-filled-surface" 
-      on:click={async () => await createNewRoom()}
-    >Create Room</button>
-    <input 
-      class="input"
-      type="text" 
-      bind:value={potentialRoomName} 
-      placeholder="Join an existing room..."
-    />
-    <button 
-      class="btn btn-sm variant-filled-surface" 
-      on:click={joinRoomByName}
-    >Join</button> 
+    <div class="flex flex-row gap-2">
+      <button 
+        class="btn btn-sm variant-filled-surface" 
+        on:click={async () => await createNewRoom()}
+      >Create Room</button>
+      <input 
+        class="input"
+        type="text" 
+        bind:value={potentialRoomName} 
+        placeholder="Join an existing room..."
+      />
+      <button 
+        class="btn btn-sm variant-filled-surface" 
+        on:click={joinRoomByName}
+      >Join</button> 
+    </div>
   {/if}
 
   {#if roomId && isAdmin}
     {#if currentQuestion}
-      <p>{currentQuestion.answers?.length || 0} answers collected</p>
-      <button 
-        class="btn btn-sm variant-filled-surface" 
-        on:click={summarizeAnswers}
-      >Summarize answers</button>
+      <div class="flex flex-row gap-2">
+        <p>{currentQuestion.answers?.length || 0} answers collected</p>
+        <button 
+          class="btn btn-sm variant-filled-surface" 
+          on:click={summarizeAnswers}
+        >Summarize answers</button>
+      </div>
     {/if}
     {#if currentQuestionAnswer}
       <p>{currentQuestionAnswer}</p>
     {/if}
-    <input 
-      class="input"
-      type="text" 
-      bind:value={potentialQuestion} 
-      placeholder="New question" 
-    />
-    <button 
-      class="btn btn-sm variant-filled-surface"
-      on:click={submitQuestion}
-    >Submit</button>
-  {:else if roomId}
-    <input 
-      class="input"
-      type="text" 
-      bind:value={potentialAnswer} 
-      placeholder="Answer" 
-    />
-    <button 
-      class="btn btn-sm variant-filled-surface" 
-      on:click={submitAnswer}
-    >Submit</button>
-    {#each questions as q}
-      <p>{q.question_text}</p>
+    <div class="flex flex-row gap-2">
+      <input 
+        class="input"
+        type="text" 
+        bind:value={potentialQuestion} 
+        placeholder="New question" 
+      />
       <button 
-        class="btn btn-sm variant-filled-surface" 
-        on:click={() => currentQuestion = q}
-      >View question</button>
-    {/each}
+        class="btn btn-sm variant-filled-surface"
+        on:click={submitQuestion}
+      >Submit</button>
+    </div>
+  {:else if roomId}
+    <div class="flex flex-col gap-2">
+      <div class="flex flex-row gap-2">
+        <input 
+          class="input"
+          type="text" 
+          bind:value={potentialAnswer} 
+          placeholder="Answer" 
+        />
+        <button 
+          class="btn btn-sm variant-filled-surface" 
+          on:click={submitAnswer}
+        >Submit</button>
+      </div>
+      {#each questions as q}
+        <div class="flex flex-row gap-2">
+          <p>{q.question_text}</p>
+          <button 
+            class="btn btn-sm variant-filled-surface" 
+            on:click={() => currentQuestion = q}
+          >View question</button>
+        </div>
+      {/each}
+    </div>
   {/if}
 {:else}
   <form on:submit|preventDefault={handleLogin}>
