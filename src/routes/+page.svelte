@@ -2,7 +2,7 @@
 	import { onMount } from "svelte";
   import { sb } from "../supabase";
   import type { AuthSession } from '@supabase/supabase-js'
-  import randomstring from 'randomstring';
+  import { nanoid } from 'nanoid'
   import { 
     storePopup,
     getModalStore,
@@ -78,17 +78,24 @@
   }
 
   const createNewRoom = async () => {
-    roomName = randomstring.generate()
+    roomName = nanoid()
     const { data, error } = await sb
       .from('rooms')
       .insert([{ name: roomName }])
+      .select()
+    console.log("created room:")
+    console.log(data)
     potentialRoomName = ""
     roomId = (data?.[0] as any).id
     isAdmin = true
+    const { data: d2, error: e2 } = await sb.auth.updateUser({
+      data: { currentRoomId: roomId, isAdmin: true },
+    })
+    showToast('Room created.')
     await listenToAnswers(roomId)
   }
 
-  const joinRoom = async (room: string) => {
+  const joinRoom = async (id: string) => {
     const { data, error } = await sb
       .from('rooms')
       .select(`
@@ -104,12 +111,16 @@
           )
         )
       `)
-      .eq('name', room )
-    if (data) {
+      .eq('id', id)
+    if (data?.length) {
       console.log(data)
       roomId = data[0].id
+      roomName = data[0].name
       questions = data[0].questions
       currentQuestion = questions?.[0] || null
+      const { data: d2, error: e2 } = await sb.auth.updateUser({
+        data: { currentRoomId: roomId },
+      })
       await listenToAnswers(roomId)
     }
   }
@@ -134,6 +145,7 @@
         question_id: currentQuestion.id,
         room_id: roomId,
       }])
+    showToast("Answer submitted.")
   }
 
   const summarizeAnswers = async () => {
@@ -168,6 +180,12 @@
     sb.auth.getSession().then(async ({ data }) => {
       userId = data.session?.user?.id || ""
       email = data.session?.user?.email || ""
+      isAdmin = !!data.session?.user.user_metadata.isAdmin
+      roomId = data.session?.user.user_metadata.currentRoomId || ""
+      if (roomId) {
+        await joinRoom(roomId)
+      }
+      console.log(data.session?.user.user_metadata)
     })
   })
 
@@ -179,7 +197,7 @@
         {
           event: 'INSERT',
           schema: 'public',
-          table: `answers' : ''}`,
+          table: `answers`,
           filter: `room_id=eq.${roomId}`,
         },
         (msg) => {
@@ -188,60 +206,108 @@
       )
       .subscribe()
   }
+
+  const joinRoomByName = async () => {
+    const { data, error } = await sb
+      .from('rooms')
+      .select('name')
+      .eq('name', potentialRoomName)
+    if (data?.length) {
+      await joinRoom((data[0] as any).id)
+    } else {
+      showToast('Room not found.')
+    }
+  }
 </script>
 
-<form on:submit|preventDefault={handleLogin} class="flex flex-col gap-3">
-  <div class="input-group input-group-divider grid-cols-[2fr_1fr]">
-    <input
-      id="email"
-      class="input text-sm"
-      type="email"
-      placeholder="Email"
-      bind:value={email}
+{#if userId}
+  <div class="flex flex-col gap-2">
+    <p class="text-xs">{email}</p>
+    <button 
+      type="button" 
+      class="btn btn-sm variant-filled-surface" 
+      on:click={confirmSignout}
+    >Sign Out</button>
+  </div>
+
+  {#if roomId}
+    <p>Room: {roomName}</p>
+    {#if currentQuestion}
+      <p>{currentQuestion.question_text}</p>
+    {/if}
+  {:else}
+    <button 
+      class="btn btn-sm variant-filled-surface" 
+      on:click={async () => await createNewRoom()}
+    >Create Room</button>
+    <input 
+      type="text" 
+      bind:value={potentialRoomName} 
+      placeholder="Join an existing room..."
     />
     <button 
-      type="submit" 
-      class="btn btn-md rounded-none variant-filled-surface text-xs" 
-      aria-live="polite" 
-      disabled={loading}
-    >
-      <span>Send login link</span>
-    </button>
-  </div>
-</form>
-
-<div class="flex flex-col gap-2">
-  <p class="text-xs">{email}</p>
-  <button 
-    type="button" 
-    class="btn btn-sm variant-filled-surface" 
-    on:click={confirmSignout}
-  >Sign Out</button>
-</div>
-
-{#if roomId}
-  <p>Room: {roomId}</p>
-  <p>{currentQuestion}</p>
-{:else}
-  <button on:click={async () => await createNewRoom()}>Create Room</button>
-  <input type="text" bind:value={potentialRoomName} placeholder="Join an existing room..."/>
-  <button on:click={async () => await joinRoom(potentialRoomName)}>Join</button> 
-{/if}
-
-{#if roomId && isAdmin}
-  {#if currentQuestion}
-    <p>{currentQuestion.answers.length} answers collected</p>
-    <button on:click={summarizeAnswers}>Summarize answers</button>
+      class="btn btn-sm variant-filled-surface" 
+      on:click={joinRoomByName}
+    >Join</button> 
   {/if}
-  <input type="text" bind:value={potentialQuestion} placeholder="New question" />
-  <button on:click={submitQuestion}>Submit</button>
-{:else if roomId}
-  <input type="text" bind:value={potentialAnswer} placeholder="Answer" />
-  <button on:click={submitAnswer}>Submit</button>
-  {#each questions as q}
-    <p>{q.question_text}</p>
-    <button on:click={() => currentQuestion = q}>View question</button>
-  {/each}
+
+  {#if roomId && isAdmin}
+    {#if currentQuestion}
+      <p>{currentQuestion.answers.length} answers collected</p>
+      <button 
+        class="btn btn-sm variant-filled-surface" 
+        on:click={summarizeAnswers}
+      >Summarize answers</button>
+    {/if}
+    <input 
+      type="text" 
+      bind:value={potentialQuestion} 
+      placeholder="New question" 
+    />
+    <button 
+      class="btn btn-sm variant-filled-surface"
+      on:click={submitQuestion}
+    >Submit</button>
+  {:else if roomId}
+    <input 
+      type="text" 
+      bind:value={potentialAnswer} placeholder="Answer" 
+    />
+    <button 
+      class="btn btn-sm variant-filled-surface" 
+      on:click={submitAnswer}
+    >Submit</button>
+    {#each questions as q}
+      <p>{q.question_text}</p>
+      <button 
+        class="btn btn-sm variant-filled-surface" 
+        on:click={() => currentQuestion = q}
+      >View question</button>
+    {/each}
+  {/if}
+{:else}
+  <form 
+    on:submit|preventDefault={handleLogin} 
+    class="flex flex-col gap-3"
+  >
+    <div class="input-group input-group-divider grid-cols-[2fr_1fr]">
+      <input
+        id="email"
+        class="input text-sm"
+        type="email"
+        placeholder="Email"
+        bind:value={email}
+      />
+      <button 
+        type="submit" 
+        class="btn btn-md rounded-none variant-filled-surface text-xs" 
+        aria-live="polite" 
+        disabled={loading}
+      >
+        <span>Send login link</span>
+      </button>
+    </div>
+  </form>
 {/if}
 
 
