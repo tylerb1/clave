@@ -117,7 +117,7 @@
       roomName = data[0].name
       questions = data[0].questions
       currentQuestion = questions?.[0] || null
-      answersCollected = currentQuestion.answers.length
+      answersCollected = currentQuestion.answers?.length || 0
       answers = currentQuestion.answers.map((a: any) => a.answer_text)
       const { data: d2, error: e2 } = await sb.auth.updateUser({
         data: { currentRoomId: roomId },
@@ -255,7 +255,7 @@
 
   {#if roomId && isAdmin}
     {#if currentQuestion}
-      <p>{currentQuestion.answers.length} answers collected</p>
+      <p>{currentQuestion.answers?.length || 0} answers collected</p>
       <button 
         class="btn btn-sm variant-filled-surface" 
         on:click={summarizeAnswers}
