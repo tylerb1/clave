@@ -52,7 +52,7 @@ export async function handler(event) {
     console.log(data)
     return {
       statusCode: 200,
-      body: data?.choices?.[0].message,
+      body: JSON.stringify(data?.choices?.[0].message),
     };
   } catch (error) {
     console.error('Error:', error);
