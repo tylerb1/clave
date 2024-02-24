@@ -24,7 +24,7 @@ export async function handler(event) {
       Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
-      model: 'text-curie-001',
+      model: 'gpt-4',
       prompt: myPrompt,
       temperature: 1,
       max_tokens: 100,
