@@ -27,6 +27,7 @@
   let currentQuestion: any = null
   let questions: any[] = []
   let answers: string[] = []
+  let currentQuestionAnswer = ""
   let joinedAnswers = ""
   let loading = false
   let email = ""
@@ -134,7 +135,7 @@
         room_id: roomId,
       }])
       .select()
-    questions.push(data?.[0])
+    questions = [...questions, data?.[0]]
     currentQuestion = questions[questions.length - 1]
   }
 
@@ -171,7 +172,7 @@
       await sb
         .from('questions')
         .update({ generated_answer: rawText })
-        .eq('question_id', currentQuestion.id);
+        .eq('id', currentQuestion.id);
       showToast("Answers summarized.")
     } catch (error) {
       showToast('Error summarizing answers.')
@@ -243,6 +244,7 @@
       on:click={async () => await createNewRoom()}
     >Create Room</button>
     <input 
+      class="input"
       type="text" 
       bind:value={potentialRoomName} 
       placeholder="Join an existing room..."
@@ -261,7 +263,11 @@
         on:click={summarizeAnswers}
       >Summarize answers</button>
     {/if}
+    {#if currentQuestionAnswer}
+      <p>{currentQuestionAnswer}</p>
+    {/if}
     <input 
+      class="input"
       type="text" 
       bind:value={potentialQuestion} 
       placeholder="New question" 
@@ -272,8 +278,10 @@
     >Submit</button>
   {:else if roomId}
     <input 
+      class="input"
       type="text" 
-      bind:value={potentialAnswer} placeholder="Answer" 
+      bind:value={potentialAnswer} 
+      placeholder="Answer" 
     />
     <button 
       class="btn btn-sm variant-filled-surface" 
