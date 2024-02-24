@@ -119,7 +119,7 @@
       questions = data[0].questions
       currentQuestion = questions?.[0] || null
       answersCollected = currentQuestion.answers?.length || 0
-      answers = currentQuestion.answers.map((a: any) => a.answer_text)
+      answers = currentQuestion.answers?.map((a: any) => a.answer_text)
       const { data: d2, error: e2 } = await sb.auth.updateUser({
         data: { currentRoomId: roomId },
       })
@@ -234,83 +234,85 @@
     >Sign Out</button>
   </div>
 
-  {#if roomId}
-    <p>Room: {roomName}</p>
-    {#if currentQuestion}
-      <p>Current question: {currentQuestion.question_text}</p>
-    {/if}
-  {:else}
-    <div class="flex flex-row gap-2">
-      <button 
-        class="btn btn-sm variant-filled-surface" 
-        on:click={async () => await createNewRoom()}
-      >Create Room</button>
-      <input 
-        class="input"
-        type="text" 
-        bind:value={potentialRoomName} 
-        placeholder="Join an existing room..."
-      />
-      <button 
-        class="btn btn-sm variant-filled-surface" 
-        on:click={joinRoomByName}
-      >Join</button> 
-    </div>
-  {/if}
-
-  {#if roomId && isAdmin}
-    {#if currentQuestion}
+  <div class="flex flex-col gap-2 max-w-48">
+    {#if roomId}
+      <p>Room: {roomName}</p>
+      {#if currentQuestion}
+        <p>Current question: {currentQuestion.question_text}</p>
+      {/if}
+    {:else}
       <div class="flex flex-row gap-2">
-        <p>{currentQuestion.answers?.length || 0} answers collected</p>
         <button 
           class="btn btn-sm variant-filled-surface" 
-          on:click={summarizeAnswers}
-        >Summarize answers</button>
+          on:click={async () => await createNewRoom()}
+        >Create Room</button>
+        <input 
+          class="input"
+          type="text" 
+          bind:value={potentialRoomName} 
+          placeholder="Join an existing room..."
+        />
+        <button 
+          class="btn btn-sm variant-filled-surface" 
+          on:click={joinRoomByName}
+        >Join</button> 
       </div>
     {/if}
-    {#if currentQuestionAnswer}
-      <p>{currentQuestionAnswer}</p>
-    {/if}
-    <div class="flex flex-row gap-2">
-      <input 
-        class="input"
-        type="text" 
-        bind:value={potentialQuestion} 
-        placeholder="New question" 
-      />
-      <button 
-        class="btn btn-sm variant-filled-surface"
-        on:click={submitQuestion}
-      >Submit</button>
-    </div>
-  {:else if roomId}
-    <div class="flex flex-col gap-2">
+
+    {#if roomId && isAdmin}
+      {#if currentQuestion}
+        <div class="flex flex-row gap-2">
+          <p>{currentQuestion.answers?.length || 0} answers collected</p>
+          <button 
+            class="btn btn-sm variant-filled-surface" 
+            on:click={summarizeAnswers}
+          >Summarize answers</button>
+        </div>
+      {/if}
+      {#if currentQuestionAnswer}
+        <p>{currentQuestionAnswer}</p>
+      {/if}
       <div class="flex flex-row gap-2">
         <input 
           class="input"
           type="text" 
-          bind:value={potentialAnswer} 
-          placeholder="Answer" 
+          bind:value={potentialQuestion} 
+          placeholder="New question" 
         />
         <button 
-          class="btn btn-sm variant-filled-surface" 
-          on:click={submitAnswer}
+          class="btn btn-sm variant-filled-surface"
+          on:click={submitQuestion}
         >Submit</button>
       </div>
-      {#each questions as q}
+    {:else if roomId}
+      <div class="flex flex-col gap-2">
         <div class="flex flex-row gap-2">
-          <p>{q.question_text}</p>
+          <input 
+            class="input"
+            type="text" 
+            bind:value={potentialAnswer} 
+            placeholder="Answer" 
+          />
           <button 
             class="btn btn-sm variant-filled-surface" 
-            on:click={() => currentQuestion = q}
-          >View question</button>
+            on:click={submitAnswer}
+          >Submit</button>
         </div>
-      {/each}
-    </div>
-  {/if}
+        {#each questions as q}
+          <div class="flex flex-row gap-2">
+            <p>{q.question_text}</p>
+            <button 
+              class="btn btn-sm variant-filled-surface" 
+              on:click={() => currentQuestion = q}
+            >View question</button>
+          </div>
+        {/each}
+      </div>
+    {/if}
+  </div>
 {:else}
   <form on:submit|preventDefault={handleLogin}>
-    <div class="input-group input-group-divider grid-cols-[2fr_1fr] max-w-32">
+    <div class="input-group input-group-divider grid-cols-[2fr_1fr]">
       <input
         id="email"
         class="input text-sm"
