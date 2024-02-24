@@ -5,7 +5,6 @@ export async function handler(event) {
   let answers = undefined;
   const jwt = event.headers.authorization.split(' ')[1]
   if (jwt) {
-    console.log(event.body);
     question = JSON.parse(event.body).question;
     answers = JSON.parse(event.body).answers;
   } else {
@@ -14,9 +13,7 @@ export async function handler(event) {
       body: JSON.stringify({ error: 'Not Authorized (Invalid Token)' }),
     };
   }
-
   const myPrompt = `Describe and summarize the following list of answers to the question "${question}" as accurately, comprehensively, and concisely as possible: ${answers}`;
-
   const openAiConfig = {
     method: 'POST',
     headers: {
@@ -48,8 +45,6 @@ export async function handler(event) {
       openAiConfig,
     );
     const data = await response.json();
-    console.log("data:")
-    console.log(data)
     return {
       statusCode: 200,
       body: JSON.stringify(data?.choices?.[0].message),

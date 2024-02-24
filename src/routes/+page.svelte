@@ -85,8 +85,6 @@
       .from('rooms')
       .insert([{ name: roomName }])
       .select()
-    console.log("created room:")
-    console.log(data)
     potentialRoomName = ""
     roomId = (data?.[0] as any).id
     isAdmin = true
@@ -115,7 +113,6 @@
       `)
       .eq('id', id)
     if (data?.length) {
-      console.log(data)
       roomId = data[0].id
       roomName = data[0].name
       questions = data[0].questions
@@ -169,12 +166,8 @@
           }),
         }
       )
-      console.log("openai response")
-      console.log(resp)
       const response = await resp.json();
-      console.log("openai response")
-      console.log(response)
-      const rawText = response[0].generated_text.trim();
+      const rawText = response?.content?.trim();
       await sb
         .from('questions')
         .update({ generated_answer: rawText })
@@ -195,7 +188,6 @@
       if (roomId) {
         await joinRoom(roomId)
       }
-      console.log(data.session?.user.user_metadata)
     })
   })
 
@@ -223,8 +215,6 @@
       .select('id')
       .eq('name', potentialRoomName)
     if (data?.length) {
-      console.log("trying to join")
-      console.log(data[0])
       await joinRoom((data[0] as any).id)
     } else {
       showToast('Room not found.')
@@ -233,8 +223,8 @@
 </script>
 
 {#if userId}
-  <div class="flex flex-col gap-2">
-    <p class="text-xs">{email}</p>
+  <div class="flex flex-col gap-2 max-w-32">
+    <p class="text-xs">Logged in as: {email}</p>
     <button 
       type="button" 
       class="btn btn-sm variant-filled-surface" 
@@ -245,7 +235,7 @@
   {#if roomId}
     <p>Room: {roomName}</p>
     {#if currentQuestion}
-      <p>{currentQuestion.question_text}</p>
+      <p>Current question: {currentQuestion.question_text}</p>
     {/if}
   {:else}
     <button 
@@ -298,11 +288,8 @@
     {/each}
   {/if}
 {:else}
-  <form 
-    on:submit|preventDefault={handleLogin} 
-    class="flex flex-col gap-3"
-  >
-    <div class="input-group input-group-divider grid-cols-[2fr_1fr]">
+  <form on:submit|preventDefault={handleLogin}>
+    <div class="input-group input-group-divider grid-cols-[2fr_1fr] max-w-32">
       <input
         id="email"
         class="input text-sm"
