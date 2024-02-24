@@ -207,7 +207,9 @@
           filter: `room_id=eq.${roomId}`,
         },
         (msg) => {
-          answersCollected += 1
+          if (msg.new.question_id === currentQuestion.id) {
+            answersCollected += 1
+          }
         }
       )
       .subscribe()
@@ -310,6 +312,7 @@
           on:click={() => {
             currentQuestion = q
             currentQuestionAnswer = q.generated_answer || ""
+            answersCollected = q.answers?.length || 0
           }}
         >View question</button>
       </div>
