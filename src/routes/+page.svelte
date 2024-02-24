@@ -26,10 +26,12 @@
   let roomName = ""
   let currentQuestion: any = null
   let questions: any[] = []
+  let answers: string[] = []
   let joinedAnswers = ""
   let loading = false
   let email = ""
   let userId = ""
+  let answersCollected = 0
   let session: AuthSession | null = null
 
   const showToast = (message: string) => {
@@ -118,6 +120,8 @@
       roomName = data[0].name
       questions = data[0].questions
       currentQuestion = questions?.[0] || null
+      answersCollected = currentQuestion.answers.length
+      answers = currentQuestion.answers.map((a: any) => a.answer_text)
       const { data: d2, error: e2 } = await sb.auth.updateUser({
         data: { currentRoomId: roomId },
       })
@@ -149,6 +153,7 @@
   }
 
   const summarizeAnswers = async () => {
+    joinedAnswers = '\'' + answers.join('\' \'') + '\''
     try {
       const resp = await fetch(
         `${import.meta.env.VITE_EMAIL_REDIRECT_URL}/.netlify/functions/summarize`, 
@@ -165,6 +170,8 @@
         }
       )
       const response = await resp.json();
+      console.log("openai response")
+      console.log(response)
       const rawText = response[0].generated_text.trim();
       await sb
         .from('questions')
@@ -182,6 +189,7 @@
       email = data.session?.user?.email || ""
       isAdmin = !!data.session?.user.user_metadata.isAdmin
       roomId = data.session?.user.user_metadata.currentRoomId || ""
+      session = data.session
       if (roomId) {
         await joinRoom(roomId)
       }
@@ -201,7 +209,7 @@
           filter: `room_id=eq.${roomId}`,
         },
         (msg) => {
-          console.log(msg)
+          answersCollected += 1
         }
       )
       .subscribe()
@@ -210,9 +218,11 @@
   const joinRoomByName = async () => {
     const { data, error } = await sb
       .from('rooms')
-      .select('name')
+      .select('id')
       .eq('name', potentialRoomName)
     if (data?.length) {
+      console.log("trying to join")
+      console.log(data[0])
       await joinRoom((data[0] as any).id)
     } else {
       showToast('Room not found.')

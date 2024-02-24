@@ -35,7 +35,7 @@ export async function handler(event) {
   };
   try {
     const response = await fetch(
-      '<https://api.openai.com/v1/completions>',
+      'https://api.openai.com/v1/completions',
       openAiConfig,
     );
     const data = await response.json();
