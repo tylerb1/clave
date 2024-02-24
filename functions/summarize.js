@@ -25,9 +25,18 @@ export async function handler(event) {
     },
     body: JSON.stringify({
       model: 'gpt-4',
-      prompt: myPrompt,
+      messages: [
+        {
+          "role": "system",
+          "content": "You are a helpful assistant."
+        },
+        {
+          "role": "user",
+          "content": myPrompt
+        }
+      ],
       temperature: 1,
-      max_tokens: 100,
+      max_tokens: 200,
       top_p: 1,
       frequency_penalty: 0.5,
       presence_penalty: 0,
@@ -43,7 +52,7 @@ export async function handler(event) {
     console.log(data)
     return {
       statusCode: 200,
-      body: data,
+      body: data?.choices?.[0],
     };
   } catch (error) {
     console.error('Error:', error);
