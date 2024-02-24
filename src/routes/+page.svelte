@@ -118,6 +118,7 @@
       roomName = data[0].name
       questions = data[0].questions
       currentQuestion = questions?.[0] || null
+      currentQuestionAnswer = currentQuestion?.generated_answer || ""
       answersCollected = currentQuestion.answers?.length || 0
       answers = currentQuestion.answers?.map((a: any) => a.answer_text)
       const { data: d2, error: e2 } = await sb.auth.updateUser({
@@ -174,6 +175,7 @@
         .from('questions')
         .update({ generated_answer: rawText })
         .eq('id', currentQuestion.id);
+      currentQuestionAnswer = rawText
       showToast("Answers summarized.")
     } catch (error) {
       showToast('Error summarizing answers.')
@@ -262,7 +264,7 @@
     {#if roomId && isAdmin}
       {#if currentQuestion}
         <div class="flex flex-row gap-2">
-          <p>{currentQuestion.answers?.length || 0} answers collected</p>
+          <p>{answersCollected} answers collected</p>
           <button 
             class="btn btn-sm variant-filled-surface" 
             on:click={summarizeAnswers}
@@ -303,7 +305,10 @@
             <p>{q.question_text}</p>
             <button 
               class="btn btn-sm variant-filled-surface" 
-              on:click={() => currentQuestion = q}
+              on:click={() => {
+                currentQuestion = q
+                currentQuestionAnswer = q.generated_answer || ""
+              }}
             >View question</button>
           </div>
         {/each}
