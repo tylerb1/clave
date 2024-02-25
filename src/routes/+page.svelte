@@ -7,10 +7,13 @@
     storePopup,
     getModalStore,
     getToastStore, 
-    type ToastSettings, 
+    Toast,
     initializeStores,
-	type ModalSettings,
+    type ToastSettings, 
+    type ModalSettings,
+	Modal,
   } from '@skeletonlabs/skeleton';
+  import { Copy, CheckCircled } from "radix-icons-svelte";
   import { computePosition, autoUpdate, offset, shift, flip, arrow } from '@floating-ui/dom';
 
   storePopup.set({ computePosition, autoUpdate, offset, shift, flip, arrow });
@@ -24,16 +27,16 @@
   let potentialAnswer = ""
   let roomId = ""
   let roomName = ""
-  let currentQuestion: any = null
-  let questions: any[] = []
-  let answers: string[] = []
+  let currentQuestionIndex = 0
   let currentQuestionAnswer = ""
+  let questions: any[] = []
+  let answers: { user: string, text: string }[] = []
   let joinedAnswers = ""
   let loading = false
   let email = ""
   let userId = ""
-  let answersCollected = 0
   let session: AuthSession | null = null
+  $: currentQuestionUserAnswer = answers?.find((a: any) => a.user === userId)?.text || ""
 
   const showToast = (message: string) => {
     const t: ToastSettings = {
@@ -108,7 +111,8 @@
           generated_answer,
           answers (
             id,
-            answer_text
+            answer_text,
+            user_id
           )
         )
       `)
@@ -117,10 +121,13 @@
       roomId = data[0].id
       roomName = data[0].name
       questions = data[0].questions
-      currentQuestion = questions?.[0] || null
-      currentQuestionAnswer = currentQuestion?.generated_answer || ""
-      answersCollected = currentQuestion.answers?.length || 0
-      answers = currentQuestion.answers?.map((a: any) => a.answer_text)
+      answers = questions[currentQuestionIndex]?.answers?.map((a: any) => { 
+        return {
+          text: a.answer_text,
+          user: a.user_id,
+        }
+      })
+      currentQuestionAnswer = questions[currentQuestionIndex]?.generated_answer || ""
       const { data: d2, error: e2 } = await sb.auth.updateUser({
         data: { currentRoomId: roomId },
       })
@@ -137,7 +144,14 @@
       }])
       .select()
     questions = [...questions, data?.[0]]
-    currentQuestion = questions[questions.length - 1]
+    currentQuestionIndex = questions.length - 1
+    currentQuestionAnswer = questions[currentQuestionIndex].generated_answer || "";
+    answers = questions[currentQuestionIndex]?.answers?.map((a: any) => { 
+      return {
+        text: a.answer_text,
+        user: a.user_id,
+      }
+    });
   }
 
   const submitAnswer = async () => {
@@ -145,15 +159,17 @@
       .from('answers')
       .insert([{ 
         answer_text: potentialAnswer,
-        question_id: currentQuestion.id,
+        question_id: questions[currentQuestionIndex].id,
         room_id: roomId,
         user_id: userId,
       }])
+    answers = [...answers, { text: potentialAnswer, user: userId }]
+    potentialAnswer = ""
     showToast("Answer submitted.")
   }
 
   const summarizeAnswers = async () => {
-    joinedAnswers = '\'' + answers.join('\' \'') + '\''
+    joinedAnswers = '\'' + answers.map((ans: any) => ans.text).join('\' \'') + '\''
     try {
       const resp = await fetch(
         `${import.meta.env.VITE_EMAIL_REDIRECT_URL}/.netlify/functions/summarize`, 
@@ -164,7 +180,7 @@
             Authorization: `Bearer ${session?.access_token}`,
           },
           body: JSON.stringify({ 
-            question: currentQuestion.question_text, 
+            question: questions[currentQuestionIndex].question_text, 
             answers: joinedAnswers
           }),
         }
@@ -174,7 +190,7 @@
       await sb
         .from('questions')
         .update({ generated_answer: rawText })
-        .eq('id', currentQuestion.id);
+        .eq('id', questions[currentQuestionIndex].id);
       currentQuestionAnswer = rawText
       showToast("Answers summarized.")
     } catch (error) {
@@ -207,9 +223,12 @@
           filter: `room_id=eq.${roomId}`,
         },
         (msg) => {
-          if (msg.new.question_id === currentQuestion.id) {
-            answersCollected += 1
-          }
+          questions = questions.map((q) => {
+            if (q.id === msg.new.question_id) {
+              q.answers = [...q.answers, msg.new]
+            }
+            return q
+          })
         }
       )
       .subscribe()
@@ -226,116 +245,156 @@
       showToast('Room not found.')
     }
   }
+
+  const setQuestion = (i: number) => {
+    currentQuestionIndex = i;
+    currentQuestionAnswer = questions[i].generated_answer || "";
+    answers = questions[currentQuestionIndex]?.answers?.map((ans: any) => { 
+      return {
+        text: ans.answer_text,
+        user: ans.user_id,
+      }
+    });
+  }
 </script>
 
-<div class="grid md:grid-cols-3 grid-cols-1 gap-4 p-4">
+<Toast 
+  position="b" 
+  background="variant-filled-surface"
+  buttonDismissLabel='✕'
+  buttonAction='btn-sm variant-filled-secondary'
+  buttonDismiss='rounded-md btn-sm variant-filled'
+/>
+<Modal />
+<div class="grid md:grid-cols-[1fr_2fr_1fr] grid-cols-1 gap-4 p-4">
+  <h1 class="justify-self-center md:col-start-2 text-2xl">Clave</h1>
   {#if userId}
     <div class="flex flex-col gap-2 max-w-48 md:col-start-3 col-start-1 text-right justify-self-end">
       <p class="text-xs">Logged in as: {email}</p>
       <button 
         type="button" 
-        class="btn btn-sm variant-filled-surface" 
+        class="btn btn-sm variant-filled-surface rounded-md" 
         on:click={confirmSignout}
       >Sign Out</button>
     </div>
-    <div class="flex flex-col gap-2 w-full md:col-start-2 col-start-1 justify-self-center">
+    <div class="flex flex-col gap-4 w-full md:col-start-2 col-start-1 justify-self-center">
       {#if roomId}
-        <p>Room: {roomName}</p>
+        <div class="flex flex-row">
+          <p class="text-sm text-center mr-2">Room code: <span id="room-code" class="font-bold text-sm">{roomName}</span></p>
+          <button on:click={() => {
+            let roomCodeElement = document.getElementById('room-code');
+            if (roomCodeElement) {
+              var elem = document.createElement("textarea");
+              document.body.appendChild(elem);
+              elem.value = roomName;
+              elem.select();
+              document.execCommand("copy");
+              document.body.removeChild(elem);
+              showToast("Copied! Now share it with a friend.")
+            }
+          }}>
+            <Copy className="h-2 w-2"/>
+          </button>
+        </div>
         <div class="flex flex-row gap-2">
           <input 
-            class="input px-2"
+            class="input px-2 rounded-md"
             type="text" 
             bind:value={potentialQuestion} 
-            placeholder="Ask new question..." 
+            placeholder="New question" 
           />
           <button 
-            class="btn btn-sm variant-filled-surface"
+            class="btn btn-sm variant-filled-surface rounded-md"
             on:click={submitQuestion}
-          >Submit</button>
+          >Ask</button>
         </div>
       {:else}
         <div class="flex flex-row gap-2">
           <button 
-            class="btn btn-sm variant-filled-surface" 
+            class="btn btn-sm variant-filled-surface rounded-md" 
             on:click={async () => await createNewRoom()}
           >Create Room</button>
           <input 
-            class="input"
+            class="input px-2 rounded-md"
             type="text" 
             bind:value={potentialRoomName} 
             placeholder="Join an existing room..."
           />
           <button 
-            class="btn btn-sm variant-filled-surface" 
+            class="btn btn-sm variant-filled-surface rounded-md" 
             on:click={joinRoomByName}
           >Join</button> 
         </div>
       {/if}
 
-      {#if roomId && isAdmin}
+      {#if roomId && isAdmin && questions.length > 0}
         <div class="card p-2">
-          {#if currentQuestion}
-            <p>{currentQuestion.question_text}</p>
-            <div class="flex flex-row gap-2 items-center">
-              <p class="italic">{answersCollected} answers collected</p>
+          <p><strong>{questions[currentQuestionIndex].question_text}</strong></p>
+          <div class="flex flex-row gap-2 items-center mt-4 justify-between">
+            <span class="badge variant-filled">{questions[currentQuestionIndex]?.answers?.length || 0} answers</span>
+            <button 
+              class="btn btn-sm variant-filled-surface rounded-md" 
+              on:click={summarizeAnswers}
+              disabled={(questions[currentQuestionIndex]?.answers?.length || 0) < 2}
+            >Summarize</button>
+          </div>
+          {#if currentQuestionAnswer}
+            <p class="mt-4 italic">{currentQuestionAnswer}</p>
+          {/if}
+        </div>
+      {:else if roomId && questions.length > 0}
+        <div class="card flex flex-col gap-2 p-2">
+          <p><strong>{questions[currentQuestionIndex].question_text}</strong></p>
+          {#if answers.some((a) => a.user === userId)}
+            <p>Your answer: <span class="italic">{currentQuestionUserAnswer}</span></p>
+          {:else}
+            <div class="flex flex-row gap-2">
+              <input 
+                class="input px-2 rounded-md"
+                type="text" 
+                bind:value={potentialAnswer} 
+                placeholder="Answer" 
+              />
               <button 
-                class="btn btn-sm variant-filled-surface" 
-                on:click={summarizeAnswers}
-                disabled={answersCollected < 2}
-              >Summarize</button>
+                class="btn btn-sm variant-filled-surface rounded-md" 
+                on:click={submitAnswer}
+                disabled={potentialAnswer.length < 1}
+              >Submit</button>
             </div>
           {/if}
-          {#if currentQuestionAnswer}
-            <p>{currentQuestionAnswer}</p>
-          {/if}
-        </div>
-      {:else if roomId}
-        <div class="card flex flex-col gap-2 p-2">
-          <p>{currentQuestion.question_text}</p>
-          <div class="flex flex-row gap-2">
-            <input 
-              class="input"
-              type="text" 
-              bind:value={potentialAnswer} 
-              placeholder="Answer" 
-            />
-            <button 
-              class="btn btn-sm variant-filled-surface" 
-              on:click={submitAnswer}
-            >Submit</button>
-          </div>
+          <span class="badge variant-filled w-min mt-1">{questions[currentQuestionIndex]?.answers?.length || 0} answers</span>
         </div>
       {/if}
-      {#each questions as q}
-        {#if q.id !== currentQuestion?.id}
-          <div class="card card-hover p-2 flex flex-row gap-2 items-center">
-            <p>{q.question_text}</p>
-            <button 
-              class="btn btn-sm variant-filled-surface" 
-              on:click={() => {
-                currentQuestion = q
-                currentQuestionAnswer = q.generated_answer || ""
-                answersCollected = q.answers?.length || 0
-              }}
-            >View question</button>
-            <span class="badge variant-filled ml-auto">{q.answers?.length || 0}</span>
+      {#each questions as q, i}
+        {#if q.id !== questions[currentQuestionIndex]?.id}
+          <!-- svelte-ignore a11y-click-events-have-key-events -->
+          <!-- svelte-ignore a11y-no-static-element-interactions -->
+          <div 
+            class="card card-hover p-2 flex flex-row gap-2 items-center cursor-pointer"
+            on:click={() => setQuestion(i)}
+          >
+            <p class="text-xs">{q.question_text}</p>
+            {#if q.generated_answer}
+              <CheckCircled class="min-h-6 min-w-6 ml-auto"/>
+            {/if}
+            <span class="badge variant-filled {q.generated_answer ? '' : 'ml-auto'}">{q.answers?.length || 0}</span>
           </div>
         {/if}
       {/each}
     </div>
   {:else}
-    <form on:submit|preventDefault={handleLogin}>
-      <div class="input-group input-group-divider grid-cols-[2fr_1fr]">
+    <form class="justify-self-center md:col-start-2" on:submit|preventDefault={handleLogin}>
+      <div class="input-group input-group-divider grid-cols-[2fr_1fr] max-w-96 rounded-md">
         <input
           id="email"
-          class="input text-sm"
+          class="input text-sm px-2 rounded-l-md rounded-tr-none rounded-br-none"
           type="email"
           placeholder="Email"
           bind:value={email}
         />
         <button 
           type="submit" 
-          class="btn btn-md rounded-none variant-filled-surface text-xs" 
+          class="btn btn-md rounded-none rounded-r-md variant-filled-surface text-xs" 
           aria-live="polite" 
           disabled={loading}
         >
