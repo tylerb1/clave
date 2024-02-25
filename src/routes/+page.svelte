@@ -228,116 +228,122 @@
   }
 </script>
 
-{#if userId}
-  <div class="flex flex-col gap-2 max-w-48">
-    <p class="text-xs">Logged in as: {email}</p>
-    <button 
-      type="button" 
-      class="btn btn-sm variant-filled-surface" 
-      on:click={confirmSignout}
-    >Sign Out</button>
-  </div>
-
-  <div class="flex flex-col gap-2 max-w-72">
-    {#if roomId}
-      <p>Room: {roomName}</p>
-      {#if currentQuestion}
-        <p>Current question: {currentQuestion.question_text}</p>
-      {/if}
-    {:else}
-      <div class="flex flex-row gap-2">
-        <button 
-          class="btn btn-sm variant-filled-surface" 
-          on:click={async () => await createNewRoom()}
-        >Create Room</button>
-        <input 
-          class="input"
-          type="text" 
-          bind:value={potentialRoomName} 
-          placeholder="Join an existing room..."
-        />
-        <button 
-          class="btn btn-sm variant-filled-surface" 
-          on:click={joinRoomByName}
-        >Join</button> 
-      </div>
-    {/if}
-
-    {#if roomId && isAdmin}
-      {#if currentQuestion}
+<div class="grid md:grid-cols-3 grid-cols-1 gap-4 p-4">
+  {#if userId}
+    <div class="flex flex-col gap-2 max-w-48 md:col-start-3 col-start-1 text-right justify-self-end">
+      <p class="text-xs">Logged in as: {email}</p>
+      <button 
+        type="button" 
+        class="btn btn-sm variant-filled-surface" 
+        on:click={confirmSignout}
+      >Sign Out</button>
+    </div>
+    <div class="flex flex-col gap-2 w-full md:col-start-2 col-start-1 justify-self-center">
+      {#if roomId}
+        <p>Room: {roomName}</p>
         <div class="flex flex-row gap-2">
-          <p>{answersCollected} answers collected</p>
+          <input 
+            class="input px-2"
+            type="text" 
+            bind:value={potentialQuestion} 
+            placeholder="Ask new question..." 
+          />
+          <button 
+            class="btn btn-sm variant-filled-surface"
+            on:click={submitQuestion}
+          >Submit</button>
+        </div>
+      {:else}
+        <div class="flex flex-row gap-2">
           <button 
             class="btn btn-sm variant-filled-surface" 
-            on:click={summarizeAnswers}
-          >Summarize answers</button>
-        </div>
-      {/if}
-      {#if currentQuestionAnswer}
-        <p>{currentQuestionAnswer}</p>
-      {/if}
-      <div class="flex flex-row gap-2">
-        <input 
-          class="input"
-          type="text" 
-          bind:value={potentialQuestion} 
-          placeholder="New question" 
-        />
-        <button 
-          class="btn btn-sm variant-filled-surface"
-          on:click={submitQuestion}
-        >Submit</button>
-      </div>
-    {:else if roomId}
-      <div class="flex flex-col gap-2">
-        <div class="flex flex-row gap-2">
+            on:click={async () => await createNewRoom()}
+          >Create Room</button>
           <input 
             class="input"
             type="text" 
-            bind:value={potentialAnswer} 
-            placeholder="Answer" 
+            bind:value={potentialRoomName} 
+            placeholder="Join an existing room..."
           />
           <button 
             class="btn btn-sm variant-filled-surface" 
-            on:click={submitAnswer}
-          >Submit</button>
+            on:click={joinRoomByName}
+          >Join</button> 
         </div>
-      </div>
-    {/if}
-    {#each questions as q}
-      <div class="flex flex-row gap-2">
-        <p>{q.question_text}</p>
-        <button 
-          class="btn btn-sm variant-filled-surface" 
-          on:click={() => {
-            currentQuestion = q
-            currentQuestionAnswer = q.generated_answer || ""
-            answersCollected = q.answers?.length || 0
-          }}
-        >View question</button>
-      </div>
-    {/each}
-  </div>
-{:else}
-  <form on:submit|preventDefault={handleLogin}>
-    <div class="input-group input-group-divider grid-cols-[2fr_1fr]">
-      <input
-        id="email"
-        class="input text-sm"
-        type="email"
-        placeholder="Email"
-        bind:value={email}
-      />
-      <button 
-        type="submit" 
-        class="btn btn-md rounded-none variant-filled-surface text-xs" 
-        aria-live="polite" 
-        disabled={loading}
-      >
-        <span>Send login link</span>
-      </button>
+      {/if}
+
+      {#if roomId && isAdmin}
+        <div class="card p-2">
+          {#if currentQuestion}
+            <p>{currentQuestion.question_text}</p>
+            <div class="flex flex-row gap-2 items-center">
+              <p class="italic">{answersCollected} answers collected</p>
+              <button 
+                class="btn btn-sm variant-filled-surface" 
+                on:click={summarizeAnswers}
+                disabled={answersCollected < 2}
+              >Summarize</button>
+            </div>
+          {/if}
+          {#if currentQuestionAnswer}
+            <p>{currentQuestionAnswer}</p>
+          {/if}
+        </div>
+      {:else if roomId}
+        <div class="card flex flex-col gap-2 p-2">
+          <p>{currentQuestion.question_text}</p>
+          <div class="flex flex-row gap-2">
+            <input 
+              class="input"
+              type="text" 
+              bind:value={potentialAnswer} 
+              placeholder="Answer" 
+            />
+            <button 
+              class="btn btn-sm variant-filled-surface" 
+              on:click={submitAnswer}
+            >Submit</button>
+          </div>
+        </div>
+      {/if}
+      {#each questions as q}
+        {#if q.id !== currentQuestion?.id}
+          <div class="card card-hover p-2 flex flex-row gap-2 items-center">
+            <p>{q.question_text}</p>
+            <button 
+              class="btn btn-sm variant-filled-surface" 
+              on:click={() => {
+                currentQuestion = q
+                currentQuestionAnswer = q.generated_answer || ""
+                answersCollected = q.answers?.length || 0
+              }}
+            >View question</button>
+            <span class="badge variant-filled ml-auto">{q.answers?.length || 0}</span>
+          </div>
+        {/if}
+      {/each}
     </div>
-  </form>
-{/if}
+  {:else}
+    <form on:submit|preventDefault={handleLogin}>
+      <div class="input-group input-group-divider grid-cols-[2fr_1fr]">
+        <input
+          id="email"
+          class="input text-sm"
+          type="email"
+          placeholder="Email"
+          bind:value={email}
+        />
+        <button 
+          type="submit" 
+          class="btn btn-md rounded-none variant-filled-surface text-xs" 
+          aria-live="polite" 
+          disabled={loading}
+        >
+          <span>Send login link</span>
+        </button>
+      </div>
+    </form>
+  {/if}
+</div>
 
 
