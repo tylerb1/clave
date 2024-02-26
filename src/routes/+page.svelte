@@ -231,7 +231,6 @@
 
   const setCurrentQuestion = (i: number) => {
     currentQuestionIndex = i;
-    currentQuestionSummarizedAnswer = questions[i].generated_answer || "";
   }
 
   const submitQuestion = async () => {
@@ -432,6 +431,12 @@
           <span class="badge variant-filled w-min mt-1">
             {questions[currentQuestionIndex]?.answers?.length || 0} answers
           </span>
+
+          {#if currentQuestionSummarizedAnswer}
+            <p class="mt-2 italic">
+              {currentQuestionSummarizedAnswer}
+            </p>
+          {/if}
         </div>
       {/if}
       {#each questions as q, i}
