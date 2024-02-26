@@ -42,6 +42,7 @@
     return {
       text: ans.answer_text,
       user: ans.user_id,
+      question: ans.question_id,
     }
   }) || [];
 
@@ -112,6 +113,9 @@
           currentQuestionIndex = 0
           questions = []
           joinedAnswers = ""
+          await sb.auth.updateUser({
+            data: { currentRoomId: null, isAdmin: false },
+          })
         }
       },
     };
@@ -119,7 +123,7 @@
   }
 
   const createNewRoom = async () => {
-    roomName = nanoid()
+    roomName = nanoid(12)
     const { data, error } = await sb
       .from('rooms')
       .insert([{ name: roomName }])
@@ -131,7 +135,7 @@
       roomId = data[0].id
       isAdmin = true
       await sb.auth.updateUser({
-        data: { currentRoomId: roomId, isAdmin: true },
+        data: { currentRoomId: roomId, isAdmin: true, roomsCreated: [roomId] },
       })
       showToast('Room created.')
       await listenToNewAnswers(roomId)
@@ -152,7 +156,8 @@
           answers (
             id,
             answer_text,
-            user_id
+            user_id,
+            question_id
           )
         )
       `)
@@ -165,6 +170,9 @@
       await sb.auth.updateUser({
         data: { currentRoomId: roomId },
       })
+      if (session?.user.user_metadata.roomsCreated?.includes(roomId)) {
+        isAdmin = true
+      }
       await listenToNewAnswers(roomId)
       await listenToQuestionUpdates(roomId)
     }
@@ -207,10 +215,22 @@
         (msg) => {
           questions = questions.map((q) => {
             if (q.id === msg.new.id) {
-              return msg.new
+              return { ...q, generated_answer: msg.new.generated_answer }
             }
             return q
           })
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'questions',
+          filter: `room_id=eq.${roomId}`,
+        },
+        (msg) => {
+          questions = [...questions, msg.new]
         }
       )
       .subscribe()
@@ -306,7 +326,10 @@
 />
 <Modal />
 <div class="grid md:grid-cols-[1fr_2fr_1fr] grid-cols-1 gap-4 p-4">
-  <h1 class="justify-self-center md:col-start-2 text-2xl">Clave</h1>
+  <div class="justify-self-center text-center md:col-start-2">
+    <h1 class="text-2xl">Clave</h1>
+    <p class="text-sm">Fast consensus with AI</p>
+  </div>
 
   {#if userId}
     <div class="flex flex-col gap-2 max-w-48 md:col-start-3 col-start-1 text-right justify-self-end">
@@ -321,12 +344,12 @@
 
     <div class="flex flex-col gap-4 w-full md:col-start-2 col-start-1 justify-self-center">
       {#if roomId}
-        <div class="flex flex-row">
-          <p class="text-sm text-center mr-2">
-            Room code: <span id="room-code" class="font-bold text-sm">{roomName}</span>
+        <div class="flex flex-row items-center gap-2">
+          <p class="text-xs text-left w-min whitespace-nowrap">
+            Room: <span id="room-code" class="font-bold text-xs">{roomName}</span>
           </p>
 
-          <button on:click={() => {
+          <button class="variant-outline-surface rounded-md p-2" on:click={() => {
             let roomCodeElement = document.getElementById('room-code');
             if (roomCodeElement) {
               var elem = document.createElement("textarea");
@@ -335,7 +358,7 @@
               elem.select();
               document.execCommand("copy");
               document.body.removeChild(elem);
-              showToast("Copied! Now share it with a friend.")
+              showToast("Copied!")
             }
           }}>
             <Copy className="h-2 w-2"/>
@@ -383,7 +406,7 @@
 
       {#if roomId && isAdmin && questions.length > 0}
         <div class="card p-2">
-          <p><strong>{questions[currentQuestionIndex].question_text}</strong></p>
+          <p class="text-left"><strong>{questions[currentQuestionIndex].question_text}</strong></p>
 
           <div class="flex flex-row gap-2 items-center mt-4 justify-between">
             <span class="badge variant-filled">
@@ -433,21 +456,19 @@
           </span>
 
           {#if currentQuestionSummarizedAnswer}
-            <p class="mt-2 italic">
-              {currentQuestionSummarizedAnswer}
+            <p class="mt-2">
+              Summarized answer: <span class="italic">{currentQuestionSummarizedAnswer}</span>
             </p>
           {/if}
         </div>
       {/if}
       {#each questions as q, i}
         {#if q.id !== questions[currentQuestionIndex]?.id}
-          <!-- svelte-ignore a11y-click-events-have-key-events -->
-          <!-- svelte-ignore a11y-no-static-element-interactions -->
-          <div 
+          <button 
             class="card card-hover p-2 flex flex-row gap-2 items-center cursor-pointer"
             on:click={() => setCurrentQuestion(i)}
           >
-            <p class="text-xs">{q.question_text}</p>
+            <p class="text-xs text-left mr-4">{q.question_text}</p>
 
             {#if q.generated_answer}
               <CheckCircled class="min-h-6 min-w-6 ml-auto"/>
@@ -456,7 +477,7 @@
             <span class="badge variant-filled {q.generated_answer ? '' : 'ml-auto'}">
               {q.answers?.length || 0}
             </span>
-          </div>
+          </button>
         {/if}
       {/each}
     </div>

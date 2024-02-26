@@ -66,5 +66,10 @@ export async function handler(event) {
         body: JSON.stringify(error),
       };
     }
+  } else {
+    return {
+      statusCode: 401,
+      body: JSON.stringify({ error: 'Not Authorized (Invalid Token)' }),
+    };
   }
 }
