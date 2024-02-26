@@ -30,12 +30,12 @@
   let roomName = ""
   let currentQuestionIndex = 0
   let questions: any[] = []
-  let answers: { user: string, text: string }[] = []
   let joinedAnswers = ""
   let email = ""
   let userId = ""
   let session: AuthSession | null = null
 
+  $: userHasAnswered = answers.some((a: any) => a.user === userId)
   $: currentQuestionUserAnswer = answers.find((a: any) => a.user === userId)?.text || ""
   $: currentQuestionSummarizedAnswer = questions[currentQuestionIndex]?.generated_answer || ""
   $: answers = questions[currentQuestionIndex]?.answers?.map((ans: any) => { 
@@ -93,6 +93,25 @@
           session = null
           userId = ""
           await sb.auth.signOut()
+        }
+      },
+    };
+    modalStore.trigger(modal);
+  }
+
+  const confirmLeaveRoom = () => {
+    const modal: ModalSettings = {
+      type: 'confirm',
+      title: 'Leave room',
+      body: 'Are you sure?',
+      response: async (r: boolean) => {
+        if (r) {
+          isAdmin = false
+          roomId = ""
+          roomName = ""
+          currentQuestionIndex = 0
+          questions = []
+          joinedAnswers = ""
         }
       },
     };
@@ -322,6 +341,11 @@
           }}>
             <Copy className="h-2 w-2"/>
           </button>
+
+          <button 
+            class="btn btn-sm variant-filled-surface rounded-md" 
+            on:click={confirmLeaveRoom}
+          >Leave</button>
         </div>
 
         <div class="flex flex-row gap-2">
@@ -384,7 +408,7 @@
         <div class="card flex flex-col gap-2 p-2">
           <p><strong>{questions[currentQuestionIndex].question_text}</strong></p>
 
-          {#if answers.some((a) => a.user === userId)}
+          {#if userHasAnswered}
             <p>Your answer: <span class="italic">
               {currentQuestionUserAnswer}
             </span></p>
