@@ -43,6 +43,7 @@
 		"@supabase/supabase-js": "^2.39.6",
 		"@sveltejs/adapter-netlify": "^4.1.0",
 		"@types/randomstring": "^1.1.11",
+		"dotenv": "^16.4.5",
 		"isomorphic-fetch": "^3.0.0",
 		"nanoid": "^5.0.6",
 		"radix-icons-svelte": "^1.2.1"

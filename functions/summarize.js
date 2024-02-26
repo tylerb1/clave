@@ -2,10 +2,10 @@ import fetch from 'isomorphic-fetch';
 import { createClient } from '@supabase/supabase-js';
 import 'dotenv';
 const {
-  VITE_PUBLIC_SUPABASE_URL,
+  VITE_PUBLIC_SUPA_URL,
   SUPABASE_SERVICE_ROLE,
 } = process.env;
-const sb = createClient(VITE_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+const sb = createClient(VITE_PUBLIC_SUPA_URL, SUPABASE_SERVICE_ROLE);
 
 export async function handler(event) {
   let question = undefined;
