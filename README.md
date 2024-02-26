@@ -25,9 +25,10 @@ To get a local copy up and running follow these steps.
 
 ### Installation
 
-1. Clone the repo
+1. Clone the repo and navigate to it
 
-`git clone https://github.com/tylerb1/clave.git`
+`git clone https://github.com/tylerb1/clave.git <your-repo-name>`
+`cd <your-repo-name>`
 
 2. Install NPM packages
 
@@ -53,7 +54,7 @@ To run the development server with Netlify functions working locally, install th
 
 `netlify dev`
 
-To start the development server alone:
+To start the development server alone, run:
 
 `npm run dev`
 
