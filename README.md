@@ -49,13 +49,13 @@ VITE_EMAIL_REDIRECT_URL=<your-redirect-url-after-users-sign-in>
 
 ### Development
 
-To run the development server with Netlify functions working locally, run:
+To run the development server with Netlify functions working locally, install the Netlify CLI and run:
 
-netlify dev
+`netlify dev`
 
 To start the development server alone:
 
-npm run dev
+`npm run dev`
 
 ## Contributing
 
