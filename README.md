@@ -4,10 +4,12 @@
 
 Clave is a tool for reaching group consensus on any kind of issue involving open-ended answers, such as:
 - planning trips
-- addressing grievances
+- addressing grievances at work
 - civic engagement
 
 With Clave you can get a read on a group's open-ended opinions quickly. Based on the answers to one question, you can easily ask more, shortening the feedback loop between polling, planning, and acting.
+
+[Live demo](https://useclave.com)
 
 ### Built With
 
@@ -22,12 +24,16 @@ With Clave you can get a read on a group's open-ended opinions quickly. Based on
 
 1. Clone the repo and navigate to it
 
-`git clone https://github.com/tylerb1/clave.git <your-repo-name>`
-`cd <your-repo-name>`
+```
+git clone https://github.com/tylerb1/clave.git <your-repo-name>
+cd <your-repo-name>
+```
 
 2. Install NPM packages
 
-`npm install`
+```
+npm install
+```
 
 3. [Set up a Netlify project](https://docs.netlify.com/get-started/).
 
