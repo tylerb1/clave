@@ -1,6 +1,5 @@
-# Project Name
-
-Clave: Fast consensus with AI
+# Clave
+### Fast consensus with AI
 
 ## About The Project
 
