@@ -4,13 +4,12 @@ Clave: Fast consensus with AI
 
 ## About The Project
 
-Trying to get group consensus on:
+Clave is a tool for reaching group consensus on any kind of issue involving open-ended answers, such as:
+- planning trips
+- addressing grievances
+- civic engagement
 
-- planning a party with friends?
-- coordinating a family trip?
-- dealing with an unfair employer?
-
-With Clave, you can get a read on a group's open-ended opinions quickly. Based on them, you can ask further questions, shortening the feedback loop between polling and acting.
+With Clave you can get a read on a group's open-ended opinions quickly. Based on the answers to one question, you can easily ask more, shortening the feedback loop between polling, planning, and acting.
 
 ### Built With
 
