@@ -24,12 +24,16 @@ With Clave you can get a read on a group's open-ended opinions quickly. Based on
 
 1. Clone the repo and navigate to it
 
-`git clone https://github.com/tylerb1/clave.git <your-repo-name>`
-`cd <your-repo-name>`
+```
+git clone https://github.com/tylerb1/clave.git <your-repo-name>
+cd <your-repo-name>
+```
 
 2. Install NPM packages
 
-`npm install`
+```
+npm install
+```
 
 3. [Set up a Netlify project](https://docs.netlify.com/get-started/).
 
