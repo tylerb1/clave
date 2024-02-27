@@ -9,6 +9,8 @@ Clave is a tool for reaching group consensus on any kind of issue involving open
 
 With Clave you can get a read on a group's open-ended opinions quickly. Based on the answers to one question, you can easily ask more, shortening the feedback loop between polling, planning, and acting.
 
+[Live demo](https://useclave.com)
+
 ### Built With
 
 - [Svelte](https://svelte.dev/)
