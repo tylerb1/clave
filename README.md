@@ -1,5 +1,4 @@
 # Clave
-### Fast consensus with AI
 
 ## About The Project
 
