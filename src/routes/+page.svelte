@@ -271,6 +271,16 @@
     };
     modalStore.trigger(modal);
   }
+
+  /* About */
+  const showAbout = () => {
+    const modal: ModalSettings = {
+      type: 'alert',
+      title: 'About',
+      body: 'Built with <3 by <a class="underline" href="https://github.com/tylerb1/" target="_blank">tylerb1</a>.<br><br>Please consider <a class="underline" href="https://ko-fi.com/tylerb1" target="_blank">donating</a>.',
+    };
+    modalStore.trigger(modal);
+  }
 </script>
 
 <Toast 
@@ -425,6 +435,9 @@
     {/each}
   </div>
 </div>
+<button class="btn btn-sm font-bold variant-glass-primary top-2 right-2 absolute" on:click={showAbout}>
+  ⓘ
+</button>
 
 <style>
 .loader {
