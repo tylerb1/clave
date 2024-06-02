@@ -29,8 +29,11 @@
   let currentQuestionIndex = 0
   let questions: any[] = []
   let joinedAnswers = ""
+  let isSummarizing = false
+  let numAnswersSummarized = 0
 
   $: currentQuestionSummarizedAnswer = questions[currentQuestionIndex]?.generated_answer || ""
+  $: currentQuestionLastNumAnswersSummarized = questions[currentQuestionIndex]?.last_num_answers_summarized || ""
   $: answers = questions[currentQuestionIndex]?.answers?.map((ans: any) => { 
     return {
       text: ans.answer_text,
@@ -81,6 +84,7 @@
           id,
           question_text,
           generated_answer,
+          last_num_answers_summarized,
           answers (
             id,
             answer_text,
@@ -154,7 +158,11 @@
         (msg) => {
           questions = questions.map((q) => {
             if (q.id === msg.new.id) {
-              return { ...q, generated_answer: msg.new.generated_answer }
+              return { 
+                ...q, 
+                generated_answer: msg.new.generated_answer, 
+                last_num_answers_summarized: msg.new.last_num_answers_summarized
+              }
             }
             return q
           })
@@ -210,6 +218,8 @@
   }
 
   const summarizeAnswers = async () => {
+    isSummarizing = true
+    numAnswersSummarized = answers.length
     joinedAnswers = '\'' + answers.map((ans: any) => ans.text).join('\' \'') + '\''
     try {
       const resp = await fetch(
@@ -230,14 +240,16 @@
       if (rawText) {
         await sb
           .from('questions')
-          .update({ generated_answer: rawText })
+          .update({ generated_answer: rawText, last_num_answers_summarized: numAnswersSummarized})
           .eq('id', questions[currentQuestionIndex].id);
         showToast("Answers summarized.")
       } else {
         showToast('Error summarizing answers.')
       }
+      isSummarizing = false
     } catch (error) {
       showToast('Error summarizing answers.')
+      isSummarizing = false
     }
   }
 
@@ -376,6 +388,9 @@
             {questions[currentQuestionIndex]?.answers?.length || 0} answers
           </span>
 
+          {#if isSummarizing}
+            <span class="loader mr-2"></span>
+          {/if}
           <button 
             class="btn btn-sm variant-filled-surface rounded-md" 
             on:click={summarizeAnswers}
@@ -385,7 +400,7 @@
 
         {#if currentQuestionSummarizedAnswer}
           <p class="mt-2">
-            Summarized answer: <span class="italic">{currentQuestionSummarizedAnswer}</span>
+            Answer summarized from {currentQuestionLastNumAnswersSummarized} responses: <span class="italic">{currentQuestionSummarizedAnswer}</span>
           </p>
         {/if}
       </div>
@@ -411,4 +426,24 @@
   </div>
 </div>
 
+<style>
+.loader {
+    width: 24px;
+    height: 24px;
+    border: 5px solid #FFF;
+    border-bottom-color: #111827;
+    border-radius: 50%;
+    display: inline-block;
+    box-sizing: border-box;
+    animation: rotation 1s linear infinite;
+    }
 
+    @keyframes rotation {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+    } 
+</style>
