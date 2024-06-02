@@ -9,7 +9,7 @@ Clave is a tool for reaching group consensus on any kind of issue involving open
 
 With Clave you can get a read on a group's open-ended opinions quickly. Based on the answers to one question, you can easily ask more, shortening the feedback loop between polling, planning, and acting.
 
-[Live demo](https://useclave.com) (Note: feel free to use this instead of setting up your own Supabase instance. Your identity will be anonymous. Just be aware that I can see all questions, answers, and rooms.)
+[Live demo](https://useclave.com) (Note: you can use this instead of setting up your own Supabase instance and your identity will be anonymous. If you do, I can see all questions, answers, and rooms, and you'll have a limited number of summarizations.)
 
 ### Built With
 
