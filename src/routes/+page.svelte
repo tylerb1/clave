@@ -177,7 +177,9 @@
           filter: `room_id=eq.${roomId}`,
         },
         (msg) => {
-          questions = [...questions, msg.new]
+          if (!questions.some((q) => q.id === msg.new.id)) {
+            questions = [...questions, msg.new]
+          }
         }
       )
       .subscribe()
@@ -395,7 +397,7 @@
 
         <div class="flex flex-row gap-2 items-center mt-4 justify-between">
           <span class="badge variant-filled">
-            {questions[currentQuestionIndex]?.answers?.length || 0} answers
+            {questions[currentQuestionIndex]?.answers?.length || 0} {questions[currentQuestionIndex]?.answers?.length === 1 ? 'answer' : 'answers'}
           </span>
 
           {#if isSummarizing}
@@ -410,7 +412,7 @@
 
         {#if currentQuestionSummarizedAnswer}
           <p class="mt-2">
-            Answer summarized from {currentQuestionLastNumAnswersSummarized} responses: <span class="italic">{currentQuestionSummarizedAnswer}</span>
+            Answer summarized from {currentQuestionLastNumAnswersSummarized} {currentQuestionLastNumAnswersSummarized === 1 ? 'response' : 'responses'}: <span class="italic">{currentQuestionSummarizedAnswer}</span>
           </p>
         {/if}
       </div>
